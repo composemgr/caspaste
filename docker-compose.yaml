@@ -1,0 +1,75 @@
+# nginx proxy address - http://172.17.0.1:59093
+
+name: caspaste
+x-logging: &default-logging
+  options:
+    max-size: '5m'
+    max-file: '1'
+  driver: json-file
+
+services:
+  app:
+    image: ghcr.io/casjay-forks/caspaste:latest
+    container_name: caspaste-app
+    hostname: ${BASE_HOST_NAME:-$HOSTNAME}
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      PORT: 80
+      TZ: ${TZ:-America/New_York}
+      CASPASTE_DB_CLEANUP_PERIOD: 1m
+      CASPASTE_ROBOTS_DISALLOW: false
+      CASPASTE_TITLE_TITLE_MAX_LENGTH: 120
+      CASPASTE_BODY_MAX_LENGTH: 9999999999999999
+      CASPASTE_MAX_PASTE_LIFETIME: unlimited
+      CASPASTE_ADMIN_NAME: ${APP_ORG_NAME:-CasPaste}
+      CASPASTE_ADDRESS: ${BASE_HOST_NAME:-$HOSTNAME}
+      CASPASTE_UI_DEFAULT_LIFETIME: never
+      CASPASTE_UI_DEFAULT_THEME: dark
+      CASPASTE_GET_PASTES_PER_5MIN: 0
+      CASPASTE_GET_PASTES_PER_15MIN: 0
+      CASPASTE_GET_PASTES_PER_1HOUR: 0
+      CASPASTE_NEW_PASTES_PER_5MIN: 30
+      CASPASTE_NEW_PASTES_PER_15MIN: 60
+      CASPASTE_NEW_PASTES_PER_1HOUR: 120
+      CASPASTE_DB_DRIVER: postgres
+      CASPASTE_DB_SOURCE: postgres://${DB_USER_NAME:-caspaste}:${DB_USER_PASS:-changeme_db_password}@caspaste-db/${DB_CREATE_DATABASE_NAME:-caspaste}?sslmode=disable
+    ports:
+      - 'http://172.17.0.1:59093:80'
+    volumes:
+      - './rootfs/data:/data'
+      - './rootfs/config:/config'
+    depends_on:
+      - db
+    networks:
+      - caspaste
+
+  db:
+    image: docker.io/library/postgres:16.1
+    container_name: caspaste-db
+    hostname: caspaste-db
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_DB: ${DB_CREATE_DATABASE_NAME:-caspaste}
+      POSTGRES_USER: ${DB_USER_NAME:-caspaste}
+      POSTGRES_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
+    volumes:
+      - './rootfs/db/postgres/caspaste:/var/lib/postgresql/data'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+    networks:
+      - caspaste
+
+networks:
+  caspaste:
+    name: caspaste
+    external: false
+
