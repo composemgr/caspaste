@@ -36,7 +36,7 @@ services:
       CASPASTE_DB_DRIVER: postgres
       CASPASTE_DB_SOURCE: postgres://${DB_USER_NAME:-caspaste}:${DB_USER_PASS:-changeme_db_password}@caspaste-db/${DB_CREATE_DATABASE_NAME:-caspaste}?sslmode=disable
     ports:
-      - 'http://172.17.0.1:59093:80'
+      - '172.17.0.1:59093:80'
     volumes:
       - './rootfs/data:/data'
       - './rootfs/config:/config'
