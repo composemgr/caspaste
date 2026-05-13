@@ -41,12 +41,13 @@ services:
       - './volumes/data:/data'
       - './volumes/config:/config'
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - caspaste
 
   db:
-    image: docker.io/library/postgres:16.1
+    image: postgres:latest
     container_name: caspaste-db
     hostname: caspaste-db
     restart: always
@@ -72,4 +73,3 @@ networks:
   caspaste:
     name: caspaste
     external: false
-
