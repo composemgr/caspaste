@@ -35,6 +35,8 @@ services:
       CASPASTE_NEW_PASTES_PER_1HOUR: 120
       CASPASTE_DB_DRIVER: postgres
       CASPASTE_DB_SOURCE: postgres://${DB_USER_NAME:-caspaste}:${DB_USER_PASS:-changeme_db_password}@caspaste-db/${DB_CREATE_DATABASE_NAME:-caspaste}?sslmode=disable
+      CONTAINER_NAME: caspaste-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
     ports:
       - '172.17.0.1:59093:80'
     volumes:
@@ -45,6 +47,24 @@ services:
         condition: service_healthy
     networks:
       - caspaste
+      - proxy
+      - cloudflare
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://caspaste-app:80'
+      - 'cloudflare.hostname=caspaste.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.caspaste-app.entrypoints=http'
+      - 'traefik.http.routers.caspaste-app-secure.tls=true'
+      - 'traefik.http.routers.caspaste-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.caspaste-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.caspaste-app.middlewares=caspaste-app-https-redirect'
+      - 'traefik.http.routers.caspaste-app-secure.entrypoints=https'
+      - 'traefik.http.routers.caspaste-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.caspaste-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.caspaste-app-secure.service=caspaste-app'
+      - 'traefik.http.services.caspaste-app.loadbalancer.server.port=80'
 
   db:
     image: postgres:latest
@@ -59,6 +79,7 @@ services:
       POSTGRES_DB: ${DB_CREATE_DATABASE_NAME:-caspaste}
       POSTGRES_USER: ${DB_USER_NAME:-caspaste}
       POSTGRES_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
+      CONTAINER_NAME: caspaste-db
     volumes:
       - './volumes/data/db/postgres/caspaste:/var/lib/postgresql/data'
     healthcheck:
@@ -73,3 +94,7 @@ networks:
   caspaste:
     name: caspaste
     external: false
+  proxy:
+    external: true
+  cloudflare:
+    external: true
