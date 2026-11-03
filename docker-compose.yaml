@@ -38,6 +38,12 @@ services:
       CASPASTE_DB_SOURCE: postgres://${DB_USER_NAME:-caspaste}:${DB_USER_PASS:-replace-with-a-random-password}@caspaste-db/${DB_CREATE_DATABASE_NAME:-caspaste}?sslmode=disable
       CONTAINER_NAME: caspaste-app
       HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
+    healthcheck:
+      test: ['CMD-SHELL', 'caspaste --status || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     ports:
       - '172.17.0.1:64134:80'
     volumes:
